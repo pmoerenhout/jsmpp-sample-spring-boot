@@ -11,4 +11,4 @@ Start the application via the Maven Spring Boot plugin:
 
 	$ mvn spring-boot:run
 
-The server listens on port 2075 on localhost, the clients connect to the same port.
+The server listens on port 2075 on localhost, the clients connects to the same port.
