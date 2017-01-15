@@ -1,0 +1,20 @@
+spring:
+  jmx:
+    enabled: false
+  main:
+    web-environment: false
+
+smpp:
+  host: localhost
+  port: 2075
+  bind-timeout: 5000
+  enquire-link-timer: 40
+  transaction-timer: 60000
+
+logging:
+  level:
+    org.springframework: info
+    org.jsmpp: info
+    org.jsmpp.session.SMPPSession: debug
+    org.jsmpp.session.SMPPServerSession: debug
+    org.jsmpp.sample.springboot: info
