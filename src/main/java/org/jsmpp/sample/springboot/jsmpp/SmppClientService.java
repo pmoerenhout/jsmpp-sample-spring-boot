@@ -3,6 +3,9 @@ package org.jsmpp.sample.springboot.jsmpp;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import org.jsmpp.InvalidResponseException;
@@ -65,11 +68,12 @@ public class SmppClientService {
     SMPPSessionCustom session = new SMPPSessionCustom(new ConnectionProperties());
     session.setMessageReceiverListener(messageReceiverListener);
     session.addSessionStateListener(sessionStateListener);
+    session.setEnquireLinkTimer(30000);
     final String host = configuration.getHost();
     final int port = configuration.getPort();
     LOG.debug("SMPP session with id {} started on port {}", session.getId(), port);
     try {
-      LOG.warn("Connecting session with id {} on task {}", session.getId(), taskIdentifier);
+      LOG.info("Connecting session with id {} on task {}", session.getId(), taskIdentifier);
       String systemId = session.connectAndBind(host, port,
           new BindParameter(BindType.BIND_TX, "j", "jpwd", "cp", TypeOfNumber.UNKNOWN, NumberingPlanIndicator.UNKNOWN, null));
       LOG.info("Connected session with id {} with SMSC with system id {} on task {}", session.getId(), systemId, taskIdentifier);
@@ -84,28 +88,36 @@ public class SmppClientService {
     LOG.debug("Session unbind and close, done");
   }
 
-  public void sendMessages(final SMPPSessionCustom session, final String taskIdentifier, final int messageCount) {
+  private void sendMessages(final SMPPSessionCustom session, final String taskIdentifier, final int messagesToSend) {
     try {
-      for (int i = 0; i < messageCount; i++) {
+      for (int i = 0; i < messagesToSend; i++) {
 
-        SubmitSmResp submitSmResp = session.submitShortMessageGetResp("CMT",
-            TypeOfNumber.ABBREVIATED, NumberingPlanIndicator.UNKNOWN, "1616",
-            TypeOfNumber.INTERNATIONAL, NumberingPlanIndicator.ISDN, "628176504657",
-            new ESMClass(), (byte) 0, (byte) 1, null, null,
-            new RegisteredDelivery(SMSCDeliveryReceipt.DEFAULT), (byte) 0, new GeneralDataCoding(Alphabet.ALPHA_DEFAULT, MessageClass.CLASS1, false),
-            (byte) 0,
-            String.format("message session %d task %s - #%d/%d", session.getId(), taskIdentifier, i+1, messageCount).getBytes(charset));
-
-//        String messageId = session.submitShortMessage("CMT",
-//            TypeOfNumber.ABBREVIATED, NumberingPlanIndicator.UNKNOWN, "1616",
-//            TypeOfNumber.INTERNATIONAL, NumberingPlanIndicator.ISDN, "628176504657",
-//            new ESMClass(), (byte) 0, (byte) 1, null, null,
-//            new RegisteredDelivery(SMSCDeliveryReceipt.DEFAULT), (byte) 0, new GeneralDataCoding(Alphabet.ALPHA_DEFAULT, MessageClass.CLASS1, false),
-//            (byte) 0,
-//            String.format("message session %d task %s - #%d/%d", session.getId(), taskIdentifier, i+1, messageCount).getBytes(charset));
-
-        LOG.debug("Message submitted, message_id is {}", submitSmResp.getMessageId());
+        final List<Future<SubmitSmResp>> futureList = new ArrayList<>();
+        futureList.add(sendMessage(session, taskIdentifier, i + 1, messagesToSend));
+        final long futureListSize = futureList.size();
+        while (true) {
+          long done = futureList.stream().filter(s -> s.isDone()).count();
+          long cancelled = futureList.stream().filter(s -> s.isCancelled()).count();
+          if (done == futureListSize) {
+            break;
+          } else if (cancelled != 0) {
+            LOG.error("A message sending task was cancelled!");
+            break;
+          }
+          Thread.sleep(1000);
+        }
+        futureList.forEach(f -> {
+          try {
+            LOG.debug("Message submitted, message_id is {}", f.get().getMessageId());
+          } catch (ExecutionException e) {
+            LOG.error("Execution exception", e);
+          } catch (InterruptedException e) {
+            LOG.error("Interrupted", e);
+          }
+        });
       }
+    } catch (InterruptedException e) {
+      LOG.error("Interrupted", e);
     } catch (PDUException e) {
       // Invalid PDU parameter
       LOG.error("Invalid PDU parameter", e);
@@ -121,6 +133,19 @@ public class SmppClientService {
     } catch (IOException e) {
       LOG.error("IO error occured", e);
     }
+  }
+
+  @Async("messageTaskExecutor")
+  private Future<SubmitSmResp> sendMessage(final SMPPSessionCustom session, final String taskIdentifier, final int messageCount, final int messageTotal)
+      throws PDUException, ResponseTimeoutException, InvalidResponseException, NegativeResponseException, IOException {
+    SubmitSmResp submitSmResp = session.submitShortMessageGetResp("CMT",
+        TypeOfNumber.ABBREVIATED, NumberingPlanIndicator.UNKNOWN, "1616",
+        TypeOfNumber.INTERNATIONAL, NumberingPlanIndicator.ISDN, "628176504657",
+        new ESMClass(), (byte) 0, (byte) 1, null, null,
+        new RegisteredDelivery(SMSCDeliveryReceipt.DEFAULT), (byte) 0, new GeneralDataCoding(Alphabet.ALPHA_DEFAULT, MessageClass.CLASS1, false),
+        (byte) 0,
+        String.format("message session %d task %s - #%d/%d", session.getId(), taskIdentifier, messageCount, messageTotal).getBytes(charset));
+    return new AsyncResult<>(submitSmResp);
   }
 
 }

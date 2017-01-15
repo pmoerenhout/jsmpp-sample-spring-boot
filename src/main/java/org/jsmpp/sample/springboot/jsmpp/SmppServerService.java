@@ -58,6 +58,7 @@ public class SmppServerService {
     try {
       int connectionCount = 0;
       sessionListener = new SMPPServerSessionListener(port);
+      sessionListener.setPduProcessorDegree(5);
       LOG.info("Listening on port {}", port);
       while (running) {
         LOG.info("Waiting for new connection...");

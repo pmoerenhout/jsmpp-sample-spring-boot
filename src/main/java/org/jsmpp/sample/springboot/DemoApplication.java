@@ -126,6 +126,21 @@ public class DemoApplication implements CommandLineRunner {
     return threadPoolTaskExecutor;
   }
 
+  /*
+  ** TaskExecutor for message sending in SMPP client
+  */
+  @Bean
+  @Qualifier("messageTaskExecutor")
+  public TaskExecutor getMessageTaskExecutor() {
+    final ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();
+    // Set maximum of 100 sessions active
+    threadPoolTaskExecutor.setCorePoolSize(100);
+    threadPoolTaskExecutor.setMaxPoolSize(100);
+    threadPoolTaskExecutor.setQueueCapacity(NUMBER_OF_CLIENT_SESSIONS);
+    threadPoolTaskExecutor.setThreadNamePrefix("async-task-");
+    return threadPoolTaskExecutor;
+  }
+
   @Bean
   @Primary
   @Qualifier("taskExecutor")
