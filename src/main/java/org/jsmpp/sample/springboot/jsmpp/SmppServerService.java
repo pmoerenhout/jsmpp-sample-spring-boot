@@ -94,7 +94,9 @@ public class SmppServerService {
   public void stop() {
     try {
       running = false;
-      sessionListener.close();
+      if (sessionListener != null) {
+        sessionListener.close();
+      }
       LOG.info("SMPP service stopped");
     } catch (final IOException e) {
       LOG.error("Could not stop listener", e);
