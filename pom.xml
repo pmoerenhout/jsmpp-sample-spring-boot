@@ -14,7 +14,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>1.5.4.RELEASE</version>
+    <version>1.5.5.RELEASE</version>
     <relativePath/> <!-- lookup parent from repository -->
   </parent>
 
@@ -28,7 +28,7 @@
     <timestamp>${maven.build.timestamp}</timestamp>
     <maven.build.timestamp.format>dd-MM-yyyy HH:mm</maven.build.timestamp.format>
 
-    <commons-lang3.version>3.4</commons-lang3.version>
+    <commons-lang3.version>3.6</commons-lang3.version>
     <jsmpp.version>2.3.4</jsmpp.version>
   </properties>
 
