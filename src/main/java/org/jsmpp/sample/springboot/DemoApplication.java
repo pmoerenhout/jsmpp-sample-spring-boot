@@ -2,6 +2,7 @@ package org.jsmpp.sample.springboot;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
@@ -69,21 +70,22 @@ public class DemoApplication implements CommandLineRunner {
       LOG.info("cmdline argument  : " + args[i]);
     }
     LOG.info("context enviroment: {}", applicationContext.getEnvironment());
-    LOG.info("context start     : {}", applicationContext.getStartupDate());
+    LOG.info("context start     : {}", new Date(applicationContext.getStartupDate()));
 
     smppServerService.start();
     final List<Future<Long>> futureList = new ArrayList<>();
-    // Start 200 client sessions asynchronously
     for (int i = 0; i < NUMBER_OF_CLIENT_SESSIONS; i++) {
       // Start client sessions asynchronously with random number of messages
       futureList.add(smppClientService.start(RandomUtils.nextInt(MIN_MESSAGES_PER_SESSION, MAX_MESSAGES_PER_SESSION)));
     }
 
     final long futureListSize = futureList.size();
+    long done;
+    long cancelled;
     while (true) {
-      long done = futureList.stream().filter(s -> s.isDone()).count();
-      long cancelled = futureList.stream().filter(s -> s.isCancelled()).count();
-      LOG.info("done: {}/{} cancelled:{}", done, futureListSize, cancelled, futureListSize);
+      done = futureList.stream().filter(s -> s.isDone()).count();
+      cancelled = futureList.stream().filter(s -> s.isCancelled()).count();
+      LOG.info("sessions done:{}/{} cancelled:{}/{}", done, futureListSize, cancelled, futureListSize);
       if (done == futureListSize) {
         break;
       } else if (cancelled != 0) {
@@ -93,6 +95,7 @@ public class DemoApplication implements CommandLineRunner {
       Thread.sleep(1000);
     }
     smppServerService.stop();
+    LOG.info("sessions done:{}/{} cancelled:{}/{}", done, futureListSize, cancelled, futureListSize);
 
     LOG.info("All sessions are done, quit");
   }

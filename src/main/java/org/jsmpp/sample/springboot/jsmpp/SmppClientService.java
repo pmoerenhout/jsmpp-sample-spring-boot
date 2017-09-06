@@ -65,7 +65,7 @@ public class SmppClientService {
 
   public void connect(final String taskIdentifier, final int messagesToSend) throws InterruptedException {
     LOG.info("Connect on task '{}' with {} messages to send", taskIdentifier, messagesToSend);
-    SMPPSessionCustom session = new SMPPSessionCustom(new ConnectionProperties());
+    final SMPPSessionCustom session = new SMPPSessionCustom(new ConnectionProperties());
     session.setMessageReceiverListener(messageReceiverListener);
     session.addSessionStateListener(sessionStateListener);
     session.setEnquireLinkTimer(30000);
@@ -74,14 +74,14 @@ public class SmppClientService {
     LOG.debug("SMPP session with id {} started on port {}", session.getId(), port);
     try {
       LOG.info("Connecting session with id {} on task {}", session.getId(), taskIdentifier);
-      String systemId = session.connectAndBind(host, port,
+      final String systemId = session.connectAndBind(host, port,
           new BindParameter(BindType.BIND_TX, "j", "jpwd", "cp", TypeOfNumber.UNKNOWN, NumberingPlanIndicator.UNKNOWN, null));
       LOG.info("Connected session with id {} with SMSC with system id {} on task {}", session.getId(), systemId, taskIdentifier);
 
       sendMessages(session, taskIdentifier, messagesToSend);
 
     } catch (IOException e) {
-      LOG.error("Failed connect and bind to host: {}", e.getMessage());
+      LOG.error("Failed connect and bind to host {}:{}: {}", host, port, e.getMessage());
     }
     LOG.debug("Session unbind and close");
     session.unbindAndClose();
@@ -136,7 +136,7 @@ public class SmppClientService {
   }
 
   @Async("messageTaskExecutor")
-  private Future<SubmitSmResp> sendMessage(final SMPPSessionCustom session, final String taskIdentifier, final int messageCount, final int messageTotal)
+  Future<SubmitSmResp> sendMessage(final SMPPSessionCustom session, final String taskIdentifier, final int messageCount, final int messageTotal)
       throws PDUException, ResponseTimeoutException, InvalidResponseException, NegativeResponseException, IOException {
     SubmitSmResp submitSmResp = session.submitShortMessageGetResp("CMT",
         TypeOfNumber.ABBREVIATED, NumberingPlanIndicator.UNKNOWN, "1616",
