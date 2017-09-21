@@ -140,7 +140,7 @@ public class DemoApplication implements CommandLineRunner {
     threadPoolTaskExecutor.setCorePoolSize(100);
     threadPoolTaskExecutor.setMaxPoolSize(100);
     threadPoolTaskExecutor.setQueueCapacity(NUMBER_OF_CLIENT_SESSIONS);
-    threadPoolTaskExecutor.setThreadNamePrefix("async-task-");
+    threadPoolTaskExecutor.setThreadNamePrefix("message-task-");
     return threadPoolTaskExecutor;
   }
 
