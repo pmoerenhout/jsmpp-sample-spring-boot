@@ -17,7 +17,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -46,12 +48,12 @@ public class DemoApplication implements CommandLineRunner {
   private SmppClientService smppClientService;
 
   public static void main(String args[]) {
-
-    final SpringApplication springApplication = new SpringApplication(DemoApplication.class);
-    springApplication.setHeadless(true);
+    final SpringApplication application = new SpringApplicationBuilder(DemoApplication.class)
+        .headless(true).web(WebApplicationType.NONE)
+        .build();
     LOG.info("Starting the Spring context");
-    springApplication.run(args).close();
-    LOG.info("The Spring context has been running and closed");
+    application.run(args).close();
+    LOG.info("The Spring context has been closed");
   }
 
   public void run(String args[]) throws IOException, InterruptedException {
