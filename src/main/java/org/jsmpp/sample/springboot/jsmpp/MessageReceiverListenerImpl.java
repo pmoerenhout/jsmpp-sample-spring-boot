@@ -2,17 +2,19 @@
  * Licensed under the Apache License, Version 2.0 (the "License"); 
  * you may not use this file except in compliance with the License. 
  * You may obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 package org.jsmpp.sample.springboot.jsmpp;
+
+import static org.jsmpp.SMPPConstant.STAT_ESME_RSYSERR;
 
 import org.jsmpp.bean.AlertNotification;
 import org.jsmpp.bean.DataSm;
@@ -59,7 +61,7 @@ public class MessageReceiverListenerImpl implements MessageReceiverListener {
         }
         final OptionalParameter.OctetString unknown = (OptionalParameter.OctetString) deliverSm.getOptionalParameter((short) 1542);
         if (unknown != null) {
-          LOG.info("deliver_sm ???: [{}]", Util.bytesToHex(unknown.getValue()));
+          LOG.info("deliver_sm 1542: [{}]", Util.bytesToHex(unknown.getValue()));
         }
         // MessageBird networkMccMnc
         final OptionalParameter.OctetString networkMccMnc = (OptionalParameter.OctetString) deliverSm.getOptionalParameter((short) 5472);
@@ -120,8 +122,10 @@ public class MessageReceiverListenerImpl implements MessageReceiverListener {
 
 //      } catch (InvalidDeliveryReceiptException e) {
 //        LOG.error("Invalid delivery receipt", e);
+
       } catch (RuntimeException e) {
         LOG.error("Runtime exception", e);
+        throw new ProcessRequestException(e.getMessage(), STAT_ESME_RSYSERR);
       }
     } else {
       // this message is regular short message
@@ -129,14 +133,16 @@ public class MessageReceiverListenerImpl implements MessageReceiverListener {
     }
   }
 
+  @Override
   public void onAcceptAlertNotification(AlertNotification alertNotification) {
     LOG.info("onAcceptAlertNotification: {} {}", alertNotification.getSourceAddr(), alertNotification.getEsmeAddr());
   }
 
+  @Override
   public DataSmResult onAcceptDataSm(final DataSm dataSm, final Session source)
       throws ProcessRequestException {
     LOG.info("onAcceptDataSm: {} {} {}", source.getSessionId(), dataSm.getSourceAddr(), dataSm.getDestAddress());
-    return null;
+    throw new ProcessRequestException("The data_sm is not implemented", STAT_ESME_RSYSERR);
   }
 
 }
