@@ -1,18 +1,9 @@
 package org.jsmpp.sample.springboot;
 
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
-import java.util.concurrent.Future;
 
-import org.apache.commons.lang3.RandomUtils;
-import org.jsmpp.sample.springboot.jsmpp.SmppClientService;
-import org.jsmpp.sample.springboot.jsmpp.SmppServerService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.CommandLineRunner;
@@ -28,97 +19,70 @@ import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @EnableAsync
 @Configuration
 @SpringBootApplication
 public class DemoApplication implements CommandLineRunner {
 
-  private static final Logger LOG = LoggerFactory.getLogger(DemoApplication.class);
-  private static final int NUMBER_OF_CLIENT_SESSIONS = 200;
-  private static final int MIN_MESSAGES_PER_SESSION = 2;
-  private static final int MAX_MESSAGES_PER_SESSION = 250;
+  @Autowired
+  private DemoConfig config;
 
   @Autowired
   private ApplicationContext applicationContext;
-
-  @Autowired
-  private SmppServerService smppServerService;
-
-  @Autowired
-  private SmppClientService smppClientService;
 
   public static void main(String args[]) {
     final SpringApplication application = new SpringApplicationBuilder(DemoApplication.class)
         .headless(true).web(WebApplicationType.NONE)
         .build();
-    LOG.info("Starting the Spring context");
+    log.info("Starting the Spring context");
     application.run(args).close();
-    LOG.info("The Spring context has been closed");
+    log.info("The Spring context has been closed");
   }
 
-  public void run(String args[]) throws IOException, InterruptedException {
-    LOG.info("**********************************************");
-    LOG.info("Starting the main thread");
-    LOG.info("**********************************************");
-    LOG.info("java.version      : {}", System.getProperty("java.version"));
-    LOG.info("java.vendor       : {}", System.getProperty("java.vendor"));
-    LOG.info("java.home         : {}", System.getProperty("java.home"));
-    LOG.info("java.class.path   : {}", System.getProperty("java.class.path"));
-    LOG.info("user.dir          : {}", System.getProperty("user.dir"));
-    LOG.info("user.name         : {}", System.getProperty("user.name"));
-    LOG.info("default timezone  : {}", TimeZone.getDefault().getDisplayName());
-    LOG.info("default locale    : {}", Locale.getDefault().getDisplayName());
+  public void run(String args[]) throws Exception {
+    log.info("**********************************************");
+    log.info("Starting the commandrunner main thread");
+    log.info("**********************************************");
+    log.info("java.version       : {}", System.getProperty("java.version"));
+    log.info("java.vendor        : {}", System.getProperty("java.vendor"));
+    log.info("java.home          : {}", System.getProperty("java.home"));
+    log.info("java.class.path    : {}", System.getProperty("java.class.path"));
+    log.info("user.dir           : {}", System.getProperty("user.dir"));
+    log.info("user.name          : {}", System.getProperty("user.name"));
+    log.info("default timezone   : {}", TimeZone.getDefault().getDisplayName());
+    log.info("default locale     : {}", Locale.getDefault().getDisplayName());
     for (int i = 0; i < args.length; i++) {
-      LOG.info("cmdline argument  : " + args[i]);
+      log.info("cmdline argument   : " + args[i]);
     }
-    LOG.info("context enviroment: {}", applicationContext.getEnvironment());
-    LOG.info("context start     : {}", new Date(applicationContext.getStartupDate()));
+    log.info("context environment: {}", applicationContext.getEnvironment());
+    log.info("context start      : {}", new Date(applicationContext.getStartupDate()));
 
-    smppServerService.start();
-    final List<Future<Long>> futureList = new ArrayList<>();
-    for (int i = 0; i < NUMBER_OF_CLIENT_SESSIONS; i++) {
-      // Start client sessions asynchronously with random number of messages
-      futureList.add(smppClientService.start(RandomUtils.nextInt(MIN_MESSAGES_PER_SESSION, MAX_MESSAGES_PER_SESSION)));
-    }
-
-    final long futureListSize = futureList.size();
-    long done;
-    long cancelled;
-    while (true) {
-      done = futureList.stream().filter(s -> s.isDone()).count();
-      cancelled = futureList.stream().filter(s -> s.isCancelled()).count();
-      LOG.info("sessions done:{}/{} cancelled:{}/{}", done, futureListSize, cancelled, futureListSize);
-      if (done == futureListSize) {
-        break;
-      } else if (cancelled != 0) {
-        LOG.error("A task was cancelled!");
-        break;
-      }
-      Thread.sleep(1000);
-    }
-    smppServerService.stop();
-    LOG.info("sessions done:{}/{} cancelled:{}/{}", done, futureListSize, cancelled, futureListSize);
-
-    LOG.info("All sessions are done, quit");
+    /*
+     * Only static method can be called, as beans will introduce cyclic dependency problems
+     */
   }
 
   /*
-  ** TaskExecutor for BindTask in SMPP server
+   ** TaskExecutor for BindTask in SMPP server
    */
   @Bean
   @Qualifier("smppTaskExecutor")
   public TaskExecutor getSmppTaskExecutor() {
+    log.info("NumberOfClientSessions: {}", config.getNumberOfClientSessions());
     final ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();
     threadPoolTaskExecutor.setCorePoolSize(100);
     threadPoolTaskExecutor.setMaxPoolSize(100);
-    threadPoolTaskExecutor.setQueueCapacity(NUMBER_OF_CLIENT_SESSIONS);
+    threadPoolTaskExecutor.setQueueCapacity(config.getNumberOfClientSessions());
     threadPoolTaskExecutor.setThreadNamePrefix("smpp-task-");
     return threadPoolTaskExecutor;
   }
 
   /*
-  ** TaskExecutor for Sessions in SMPP client
-  */
+   ** TaskExecutor for Sessions in SMPP client
+   */
   @Bean
   @Qualifier("asyncTaskExecutor")
   public TaskExecutor getAsyncTaskExecutor() {
@@ -126,14 +90,14 @@ public class DemoApplication implements CommandLineRunner {
     // Set maximum of 100 sessions active
     threadPoolTaskExecutor.setCorePoolSize(100);
     threadPoolTaskExecutor.setMaxPoolSize(100);
-    threadPoolTaskExecutor.setQueueCapacity(NUMBER_OF_CLIENT_SESSIONS);
+    threadPoolTaskExecutor.setQueueCapacity(config.getNumberOfClientSessions());
     threadPoolTaskExecutor.setThreadNamePrefix("async-task-");
     return threadPoolTaskExecutor;
   }
 
   /*
-  ** TaskExecutor for message sending in SMPP client
-  */
+   ** TaskExecutor for message sending in SMPP client
+   */
   @Bean
   @Qualifier("messageTaskExecutor")
   public TaskExecutor getMessageTaskExecutor() {
@@ -141,7 +105,7 @@ public class DemoApplication implements CommandLineRunner {
     // Set maximum of 100 sessions active
     threadPoolTaskExecutor.setCorePoolSize(100);
     threadPoolTaskExecutor.setMaxPoolSize(100);
-    threadPoolTaskExecutor.setQueueCapacity(NUMBER_OF_CLIENT_SESSIONS);
+    threadPoolTaskExecutor.setQueueCapacity(config.getNumberOfClientSessions());
     threadPoolTaskExecutor.setThreadNamePrefix("message-task-");
     return threadPoolTaskExecutor;
   }

@@ -2,7 +2,7 @@ spring:
   jmx:
     enabled: false
   main:
-    web-environment: false
+    web-application-type: none
 
 smpp:
   host: localhost
@@ -18,3 +18,9 @@ logging:
     org.jsmpp.session.SMPPSession: debug
     org.jsmpp.session.SMPPServerSession: debug
     org.jsmpp.sample.springboot: info
+
+
+demo:
+  number-of-client-sessions: 10
+  min-messages-per-session: 2
+  max-messages-per-session: 250

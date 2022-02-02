@@ -26,18 +26,17 @@ import org.jsmpp.sample.springboot.connection.ConnectionProperties;
 import org.jsmpp.session.BindParameter;
 import org.jsmpp.session.MessageReceiverListener;
 import org.jsmpp.session.SessionStateListener;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.stereotype.Service;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 public class SmppClientService {
-
-  private static final Logger LOG = LoggerFactory.getLogger(SmppClientService.class);
 
   private SmppConfiguration configuration;
   private MessageReceiverListener messageReceiverListener;
@@ -64,28 +63,28 @@ public class SmppClientService {
   }
 
   public void connect(final String taskIdentifier, final int messagesToSend) throws InterruptedException {
-    LOG.info("Connect on task '{}' with {} messages to send", taskIdentifier, messagesToSend);
+    log.info("Connect on task '{}' with {} messages to send", taskIdentifier, messagesToSend);
     final SMPPSessionCustom session = new SMPPSessionCustom(new ConnectionProperties());
     session.setMessageReceiverListener(messageReceiverListener);
     session.addSessionStateListener(sessionStateListener);
     session.setEnquireLinkTimer(30000);
     final String host = configuration.getHost();
     final int port = configuration.getPort();
-    LOG.debug("SMPP session with id {} started on port {}", session.getId(), port);
+    log.debug("SMPP session with id {} started on port {}", session.getId(), port);
     try {
-      LOG.info("Connecting session with id {} on task {}", session.getId(), taskIdentifier);
+      log.info("Connecting session with id {} on task {}", session.getId(), taskIdentifier);
       final String systemId = session.connectAndBind(host, port,
           new BindParameter(BindType.BIND_TX, "j", "jpwd", "cp", TypeOfNumber.UNKNOWN, NumberingPlanIndicator.UNKNOWN, null));
-      LOG.info("Connected session with id {} with SMSC with system id {} on task {}", session.getId(), systemId, taskIdentifier);
+      log.info("Connected session with id {} with SMSC with system id {} on task {}", session.getId(), systemId, taskIdentifier);
 
       sendMessages(session, taskIdentifier, messagesToSend);
 
     } catch (IOException e) {
-      LOG.error("Failed connect and bind to host {}:{}: {}", host, port, e.getMessage());
+      log.error("Failed connect and bind to host {}:{}: {}", host, port, e.getMessage());
     }
-    LOG.debug("Session unbind and close");
+    log.debug("Session unbind and close");
     session.unbindAndClose();
-    LOG.debug("Session unbind and close, done");
+    log.debug("Session unbind and close, done");
   }
 
   private void sendMessages(final SMPPSessionCustom session, final String taskIdentifier, final int messagesToSend) {
@@ -101,37 +100,37 @@ public class SmppClientService {
           if (done == futureListSize) {
             break;
           } else if (cancelled != 0) {
-            LOG.error("A message sending task was cancelled!");
+            log.error("A message sending task was cancelled!");
             break;
           }
           Thread.sleep(1000);
         }
         futureList.forEach(f -> {
           try {
-            LOG.debug("Message submitted, message_id is {}", f.get().getMessageId());
+            log.debug("Message submitted, message_id is {}", f.get().getMessageId());
           } catch (ExecutionException e) {
-            LOG.error("Execution exception", e);
+            log.error("Execution exception", e);
           } catch (InterruptedException e) {
-            LOG.error("Interrupted", e);
+            log.error("Interrupted", e);
           }
         });
       }
     } catch (InterruptedException e) {
-      LOG.error("Interrupted", e);
+      log.error("Interrupted", e);
     } catch (PDUException e) {
       // Invalid PDU parameter
-      LOG.error("Invalid PDU parameter", e);
+      log.error("Invalid PDU parameter", e);
     } catch (ResponseTimeoutException e) {
       // Response timeout
-      LOG.error("Response timeout", e);
+      log.error("Response timeout", e);
     } catch (InvalidResponseException e) {
       // Invalid response
-      LOG.error("Receive invalid response", e);
+      log.error("Receive invalid response", e);
     } catch (NegativeResponseException e) {
       // Receiving negative response (non-zero command_status)
-      LOG.error("Receive negative response, e");
+      log.error("Receive negative response, e");
     } catch (IOException e) {
-      LOG.error("IO error occured", e);
+      log.error("IO error occured", e);
     }
   }
 

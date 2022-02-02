@@ -26,26 +26,25 @@ import org.jsmpp.sample.springboot.misc.Util;
 import org.jsmpp.session.DataSmResult;
 import org.jsmpp.session.MessageReceiverListener;
 import org.jsmpp.session.Session;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 public class MessageReceiverListenerImpl implements MessageReceiverListener {
 
-  private static final Logger LOG = LoggerFactory.getLogger(MessageReceiverListenerImpl.class);
-
   public void onAcceptDeliverSm(final DeliverSm deliverSm) throws ProcessRequestException {
-    LOG.info("deliver_sm seq:{} src:{} {}/{} dst:{} {}/{}",
+    log.info("deliver_sm seq:{} src:{} {}/{} dst:{} {}/{}",
         deliverSm.getSequenceNumber(),
         deliverSm.getSourceAddr(), deliverSm.getSourceAddrTon(), deliverSm.getSourceAddrNpi(),
         deliverSm.getDestAddress(), deliverSm.getDestAddrTon(), deliverSm.getDestAddrNpi());
-    LOG.debug("deliver_sm ESM           {}", Util.bytesToHex(deliverSm.getEsmClass()));
-    LOG.debug("deliver_sm sequence      {}", deliverSm.getSequenceNumber());
-    LOG.debug("deliver_sm service type  {}", deliverSm.getServiceType());
-    LOG.debug("deliver_sm priority flag {}", deliverSm.getPriorityFlag());
+    log.debug("deliver_sm ESM           {}", Util.bytesToHex(deliverSm.getEsmClass()));
+    log.debug("deliver_sm sequence      {}", deliverSm.getSequenceNumber());
+    log.debug("deliver_sm service type  {}", deliverSm.getServiceType());
+    log.debug("deliver_sm priority flag {}", deliverSm.getPriorityFlag());
     final OptionalParameter[] optionalParameters = deliverSm.getOptionalParameters();
     for (final OptionalParameter optionalParameter : optionalParameters) {
       final byte[] content = optionalParameter.serialize();
-      LOG.debug("Optional Parameter {}: [{}]", optionalParameter.tag, Util.bytesToHex(content));
+      log.debug("Optional Parameter {}: [{}]", optionalParameter.tag, Util.bytesToHex(content));
     }
 
     if (MessageType.SMSC_DEL_RECEIPT.containedIn(deliverSm.getEsmClass()) || MessageType.SME_DEL_ACK
@@ -53,28 +52,28 @@ public class MessageReceiverListenerImpl implements MessageReceiverListener {
       // this message is delivery receipt
       try {
 
-        LOG.info("deliver_sm sm : {}", new String(deliverSm.getShortMessage()));
+        log.info("deliver_sm sm : {}", new String(deliverSm.getShortMessage()));
         final OptionalParameter.OctetString jmr = (OptionalParameter.OctetString) deliverSm.getOptionalParameter((short) 8192);
         if (jmr != null) {
           final String jmrId = jmr.getValueAsString();
-          LOG.info("deliver_sm jmr: '{}'", jmrId);
+          log.info("deliver_sm jmr: '{}'", jmrId);
         }
         final OptionalParameter.OctetString unknown = (OptionalParameter.OctetString) deliverSm.getOptionalParameter((short) 1542);
         if (unknown != null) {
-          LOG.info("deliver_sm 1542: [{}]", Util.bytesToHex(unknown.getValue()));
+          log.info("deliver_sm 1542: [{}]", Util.bytesToHex(unknown.getValue()));
         }
         // MessageBird networkMccMnc
         final OptionalParameter.OctetString networkMccMnc = (OptionalParameter.OctetString) deliverSm.getOptionalParameter((short) 5472);
         if (networkMccMnc != null) {
           final String networkMccMncHex = Util.bytesToHex(networkMccMnc.getValue());
-          LOG.info("deliver_sm networkMccMnc: '{}'", networkMccMncHex);
-          LOG.info("deliver_sm networkMccMnc: '{}'", networkMccMnc.getValueAsString());
+          log.info("deliver_sm networkMccMnc: '{}'", networkMccMncHex);
+          log.info("deliver_sm networkMccMnc: '{}'", networkMccMnc.getValueAsString());
         }
         // MessageBird networkMccMnc
         final OptionalParameter.Network_error_code networkErrorCode = (OptionalParameter.Network_error_code) deliverSm.getOptionalParameter(OptionalParameter.Tag.NETWORK_ERROR_CODE);
         if (networkErrorCode != null) {
-          LOG.info("deliver_sm network ErrorCode: '{}'", networkErrorCode.getErrorCode());
-          LOG.info("deliver_sm network Type: '{}'", networkErrorCode.getNetworkType().name());
+          log.info("deliver_sm network ErrorCode: '{}'", networkErrorCode.getErrorCode());
+          log.info("deliver_sm network Type: '{}'", networkErrorCode.getNetworkType().name());
         }
 
 //        //final DeliveryReceipt delReceipt = deliverSm.getShortMessageAsDeliveryReceipt();
@@ -124,24 +123,24 @@ public class MessageReceiverListenerImpl implements MessageReceiverListener {
 //        LOG.error("Invalid delivery receipt", e);
 
       } catch (RuntimeException e) {
-        LOG.error("Runtime exception", e);
+        log.error("Runtime exception", e);
         throw new ProcessRequestException(e.getMessage(), STAT_ESME_RSYSERR);
       }
     } else {
       // this message is regular short message
-      LOG.info("Receiving message: {}", new String(deliverSm.getShortMessage()));
+      log.info("Receiving message: {}", new String(deliverSm.getShortMessage()));
     }
   }
 
   @Override
   public void onAcceptAlertNotification(AlertNotification alertNotification) {
-    LOG.info("onAcceptAlertNotification: {} {}", alertNotification.getSourceAddr(), alertNotification.getEsmeAddr());
+    log.info("onAcceptAlertNotification: {} {}", alertNotification.getSourceAddr(), alertNotification.getEsmeAddr());
   }
 
   @Override
   public DataSmResult onAcceptDataSm(final DataSm dataSm, final Session source)
       throws ProcessRequestException {
-    LOG.info("onAcceptDataSm: {} {} {}", source.getSessionId(), dataSm.getSourceAddr(), dataSm.getDestAddress());
+    log.info("onAcceptDataSm: {} {} {}", source.getSessionId(), dataSm.getSourceAddr(), dataSm.getDestAddress());
     throw new ProcessRequestException("The data_sm is not implemented", STAT_ESME_RSYSERR);
   }
 
