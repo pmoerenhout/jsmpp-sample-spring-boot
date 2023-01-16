@@ -28,7 +28,7 @@
     <maven.build.timestamp.format>dd-MM-yyyy HH:mm</maven.build.timestamp.format>
 
     <commons-lang3.version>3.12.0</commons-lang3.version>
-    <jsmpp.version>2.3.11</jsmpp.version>
+    <jsmpp.version>3.0.0</jsmpp.version>
   </properties>
 
   <dependencies>
